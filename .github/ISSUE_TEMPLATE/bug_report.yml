@@ -1,0 +1,29 @@
+name: Bug report
+description: Report a display identification, restoration, or app issue
+body:
+  - type: markdown
+    attributes:
+      value: "Remove serial numbers, display UUIDs, EDID contents, and personal paths from logs before sharing. For security issues, use private vulnerability reporting."
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: App version, macOS version, Mac chip, display models, and connection path (direct, dock, KVM, or DisplayLink).
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Redacted logs or screenshots

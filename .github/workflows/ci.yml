@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-build:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Test
+        run: swift test --build-system native
+      - name: Build local app bundle
+        run: scripts/build-app.sh
+      - name: Check bundle and CLI
+        run: |
+          codesign --verify --deep --strict dist/display-remember.app
+          dist/display-remember.app/Contents/MacOS/display-remember --version
+          dist/display-remember.app/Contents/MacOS/display-remember --help
+          dist/display-remember.app/Contents/MacOS/display-remember displayplacer --version
+      - name: Check Homebrew-style CLI symlink
+        run: |
+          ln -s "$GITHUB_WORKSPACE/dist/display-remember.app/Contents/MacOS/display-remember" "$RUNNER_TEMP/display-remember"
+          cd "$RUNNER_TEMP"
+          ./display-remember displayplacer --version
+      - name: Render fictional demo
+        run: dist/display-remember.app/Contents/MacOS/DisplayRemember --render-demo "$RUNNER_TEMP/display-remember-demo.png"
