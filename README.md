@@ -10,7 +10,7 @@ The screenshot uses fictional display data.
 
 ## Install
 
-The first public version is **v0.4.0**, initially targeting **Apple Silicon and macOS 13 or later**.
+Available for **Apple Silicon and macOS 13 or later**.
 
 ```sh
 brew install --cask d0lim/tap/display-remember
@@ -26,8 +26,21 @@ Homebrew is an installation option, not a runtime dependency. The app bundles it
 2. Set the resolution, arrangement, rotation, and mirroring in System Settings.
 3. Return to the app, check the current layout, and save it with a name.
 4. Select a saved layout to preview or restore it. Optionally enable automatic restoration while the app is running.
+5. Open **Settings…** (`⌘,`) to choose a language, change the check interval, or enable **Launch at login**.
 
 Monitor settings and the layout diagram in the app are read-only. Restoring a saved layout changes the display configuration. Automatic restoration is off by default; turn it off before changing your layout, then save the new layout before enabling it again.
+
+The app remembers your selected profile and automatic restoration choice across launches. If the selected profile disappears, automatic restoration is disabled; another profile is never silently used in its place. Closing the main window keeps the app running in the menu bar. Quitting stops monitoring.
+
+### App settings
+
+- **Language:** follow the system language, use English, or use Korean (한국어). Changes appear immediately. Other system languages fall back to English. CLI output and technical diagnostics remain in English.
+- **Launch at login:** off by default. When enabled, the app starts in the menu bar after you log in, without opening its main window. macOS manages the login item; if approval is needed, Settings links to the system Login Items panel.
+- **Check interval:** 2, 5, 10, 30, or 60 seconds; the default is 5. Polling runs only while automatic restoration is enabled. Wake and display-change events also refresh the inventory. Restoration waits for two stable polling observations and keeps a 30-second cooldown between attempts, so the interval is not a guaranteed restoration deadline.
+
+App preferences are separate from display configuration, which remains in macOS System Settings. Opening **Displays Settings** also saves automatic restoration as off until you explicitly enable it again. The standalone CLI `watch` command keeps its own five-second interval.
+
+Settings previews: [English](docs/images/settings.png) · [한국어](docs/images/settings-ko.png). These previews use fictional data and do not register login items.
 
 Profiles are stored in `~/Library/Application Support/display-remember/Profiles`. Existing files are not overwritten. Import a JSON profile in the app, or copy files from this folder to back up or share a layout.
 
@@ -82,9 +95,12 @@ The build creates `dist/display-remember.app` and a ZIP archive. Use `scripts/bu
 
 ```text
 Sources/DisplayRememberApp/      SwiftUI app, menu bar, and restoration scheduling
+Sources/DisplayRememberAppSupport/ Preferences, login items, and English/Korean resources
 Sources/DisplayRememberCLI/      Command-line interface
 Sources/DisplayRememberCore/     Native scanner, profiles, matching, and engine wrapper
 Tests/DisplayRememberCoreTests/  Fixture and process tests
+Tests/DisplayRememberAppTests/   Profile selection and startup behavior tests
+Tests/DisplayRememberAppSupportTests/ Preferences and translation tests
 Vendor/displayplacer/            Pinned upstream C/Objective-C engine and license
 Assets/                         App icon source
 scripts/                        Build and packaging tools

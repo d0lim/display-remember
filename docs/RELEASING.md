@@ -9,6 +9,12 @@ Run `swift test --build-system native`, then build and inspect the app. Use
 `DisplayRemember --render-demo OUTPUT.png` for screenshots containing fictional
 data. Do not publish real profiles, scan output, local notes, or signing files.
 
+Also render `--render-demo-ko`, `--render-settings-demo`, and
+`--render-settings-demo-ko` to check both languages in the packaged app. These
+modes use memory-only preferences and do not register login items. Check language
+switching and the login toggle in an installed app before claiming manual coverage;
+synthetic launch-event tests do not replace a real logout/login check.
+
 ## Sign and package
 
 On an Apple Silicon Mac with a Developer ID Application certificate and a saved
