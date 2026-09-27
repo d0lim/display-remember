@@ -1,10 +1,10 @@
-# display-remember
+# Display Remember
 
 Remember physical monitors and restore their saved layout after reconnection or wake.
 
-Arrange your displays in macOS System Settings, then save the result in display-remember. The app identifies monitors using EDID-derived metadata instead of relying on the current display ID or port order.
+Arrange your displays in macOS System Settings, then save the result in Display Remember. The app identifies monitors using EDID-derived metadata instead of relying on the current display ID or port order.
 
-![display-remember showing a saved layout and connected displays](docs/images/app.png)
+![Display Remember showing a saved layout and connected displays](docs/images/app.png)
 
 The screenshot uses fictional display data.
 
@@ -22,11 +22,11 @@ Homebrew is an installation option, not a runtime dependency. The app bundles it
 
 ## Use
 
-1. Open display-remember and choose **Open Displays Settings**. This turns off automatic restoration before opening the macOS Displays panel.
+1. Open Display Remember and choose **Open Displays Settings**. This turns off automatic restoration before opening the macOS Displays panel.
 2. Set the resolution, arrangement, rotation, and mirroring in System Settings.
 3. Return to the app, check the current layout, and save it with a name.
 4. Select a saved layout to preview or restore it. Optionally enable automatic restoration while the app is running.
-5. Open **Settings…** (`⌘,`) to choose a language, change the check interval, or enable **Launch at login**.
+5. Open **Settings…** (`⌘,`) to choose a language, show or hide the Dock icon, change the check interval, or enable **Launch at login**.
 
 Monitor settings and the layout diagram in the app are read-only. Restoring a saved layout changes the display configuration. Automatic restoration is off by default; turn it off before changing your layout, then save the new layout before enabling it again.
 
@@ -35,6 +35,7 @@ The app remembers your selected profile and automatic restoration choice across 
 ### App settings
 
 - **Language:** follow the system language, use English, or use Korean (한국어). Changes appear immediately. Other system languages fall back to English. CLI output and technical diagnostics remain in English.
+- **Hide Dock icon:** on by default. The app stays available in the menu bar, including while its main window is open. Changes apply immediately and persist across launches; turn this off to show the Dock icon.
 - **Launch at login:** off by default. When enabled, the app starts in the menu bar after you log in, without opening its main window. macOS manages the login item; if approval is needed, Settings links to the system Login Items panel.
 - **Check interval:** 2, 5, 10, 30, or 60 seconds; the default is 5. Polling runs only while automatic restoration is enabled. Wake and display-change events also refresh the inventory. Restoration waits for two stable polling observations and keeps a 30-second cooldown between attempts, so the interval is not a guaranteed restoration deadline.
 
@@ -49,7 +50,7 @@ Profiles are stored in `~/Library/Application Support/display-remember/Profiles`
 The app includes a command-line interface:
 
 ```sh
-CLI="/Applications/display-remember.app/Contents/MacOS/display-remember"
+CLI="/Applications/Display Remember.app/Contents/MacOS/display-remember"
 
 "$CLI" scan
 "$CLI" save desk.json --name Desk
@@ -91,7 +92,7 @@ swift test --build-system native
 scripts/build-app.sh
 ```
 
-The build creates `dist/display-remember.app` and a ZIP archive. Use `scripts/build-app.sh debug` for a debug build. Signing and notarization for published artifacts are separate release steps; local builds should not be assumed notarized.
+The build creates `dist/Display Remember.app` and a ZIP archive. Use `scripts/build-app.sh debug` for a debug build. Signing and notarization for published artifacts are separate release steps; local builds should not be assumed notarized.
 
 ```text
 Sources/DisplayRememberApp/      SwiftUI app, menu bar, and restoration scheduling

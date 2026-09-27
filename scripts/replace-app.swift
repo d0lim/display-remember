@@ -9,8 +9,8 @@ guard CommandLine.arguments.count == 3 else {
 }
 let staged = URL(fileURLWithPath: CommandLine.arguments[1]).standardizedFileURL
 let destination = URL(fileURLWithPath: CommandLine.arguments[2]).standardizedFileURL
-guard staged != destination, staged.lastPathComponent == "display-remember.app",
-      destination.lastPathComponent == "display-remember.app" else { exit(2) }
+guard staged != destination, staged.lastPathComponent == "Display Remember.app",
+      destination.lastPathComponent == "Display Remember.app" else { exit(2) }
 let result: Int32
 if FileManager.default.fileExists(atPath: destination.path) {
     result = renameatx_np(AT_FDCWD, staged.path, AT_FDCWD, destination.path, UInt32(RENAME_SWAP))

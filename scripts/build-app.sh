@@ -35,7 +35,7 @@ mkdir -p "$PROJECT_DIR/dist"
 BUILD_STAGING=$(mktemp -d "${TMPDIR:-/tmp}/display-remember-build.XXXXXX")
 DIST_STAGING=$(mktemp -d "$PROJECT_DIR/dist/.display-remember-stage.XXXXXX")
 trap 'rm -rf "$BUILD_STAGING" "$DIST_STAGING"' EXIT HUP INT TERM
-APP_DIR="$BUILD_STAGING/display-remember.app"
+APP_DIR="$BUILD_STAGING/Display Remember.app"
 mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Helpers" "$APP_DIR/Contents/Resources"
 cp "$BIN_DIR/DisplayRemember" "$APP_DIR/Contents/MacOS/DisplayRemember"
 cp "$BIN_DIR/display-remember" "$APP_DIR/Contents/MacOS/display-remember"
@@ -60,8 +60,8 @@ cat > "$APP_DIR/Contents/Info.plist" <<PLIST
 <plist version="1.0"><dict>
   <key>CFBundleExecutable</key><string>DisplayRemember</string>
   <key>CFBundleIdentifier</key><string>dev.d0lim.display-remember</string>
-  <key>CFBundleName</key><string>display-remember</string>
-  <key>CFBundleDisplayName</key><string>display-remember</string>
+  <key>CFBundleName</key><string>Display Remember</string>
+  <key>CFBundleDisplayName</key><string>Display Remember</string>
   <key>CFBundleDevelopmentRegion</key><string>en</string>
   <key>CFBundleLocalizations</key><array><string>en</string><string>ko</string></array>
   <key>CFBundlePackageType</key><string>APPL</string>
@@ -69,6 +69,7 @@ cat > "$APP_DIR/Contents/Info.plist" <<PLIST
   <key>CFBundleVersion</key><string>$VERSION</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>LSMinimumSystemVersion</key><string>13.0</string>
+  <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSPrincipalClass</key><string>NSApplication</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
@@ -123,8 +124,8 @@ fi
 "$PROJECT_DIR/scripts/package-app.sh" "$APP_DIR"
 
 # Copy fresh, then exchange complete bundles atomically; never merge old files.
-STAGED_APP="$DIST_STAGING/display-remember.app"
+STAGED_APP="$DIST_STAGING/Display Remember.app"
 ditto --noextattr --norsrc "$APP_DIR" "$STAGED_APP"
 xattr -cr "$STAGED_APP"
-xcrun swift "$PROJECT_DIR/scripts/replace-app.swift" "$STAGED_APP" "$PROJECT_DIR/dist/display-remember.app"
-printf '%s\n' "$PROJECT_DIR/dist/display-remember.app"
+xcrun swift "$PROJECT_DIR/scripts/replace-app.swift" "$STAGED_APP" "$PROJECT_DIR/dist/Display Remember.app"
+printf '%s\n' "$PROJECT_DIR/dist/Display Remember.app"

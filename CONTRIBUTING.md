@@ -12,7 +12,7 @@ swift test --build-system native
 scripts/build-app.sh debug
 ```
 
-The app bundle is written to `dist/display-remember.app`. The bundled CLI is at `dist/display-remember.app/Contents/MacOS/display-remember`.
+The app bundle is written to `dist/Display Remember.app`. The bundled CLI is at `dist/Display Remember.app/Contents/MacOS/display-remember`.
 
 Add regression tests for changes to parsing, identity matching, profile validation, restoration, and process handling. Use fixtures and fake processes for automated tests. Preserve argument-array execution, timeouts, and refusal to guess between ambiguous monitors.
 

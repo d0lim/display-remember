@@ -3,13 +3,13 @@ set -eu
 
 PROJECT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 if [ "$#" -ne 1 ]; then
-    printf '%s\n' 'Usage: package-app.sh /path/to/display-remember.app' >&2
+    printf '%s\n' 'Usage: package-app.sh "/path/to/Display Remember.app"' >&2
     exit 2
 fi
 case "$1" in /*) APP_DIR=$1 ;; *) APP_DIR="$PWD/$1" ;; esac
 APP_DIR=${APP_DIR%/}
-if [ "$(basename -- "$APP_DIR")" != display-remember.app ]; then
-    printf '%s\n' 'The bundle must be named display-remember.app for the release archive.' >&2
+if [ "$(basename -- "$APP_DIR")" != 'Display Remember.app' ]; then
+    printf '%s\n' 'The bundle must be named Display Remember.app for the release archive.' >&2
     exit 2
 fi
 test -d "$APP_DIR/Contents" || { printf '%s\n' 'Expected a macOS application bundle.' >&2; exit 2; }

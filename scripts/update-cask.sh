@@ -25,15 +25,15 @@ cask "display-remember" do
   sha256 "$CHECKSUM"
 
   url "https://github.com/d0lim/display-remember/releases/download/v#{version}/display-remember-#{version}-arm64.zip"
-  name "display-remember"
+  name "Display Remember"
   desc "Remember physical monitors and restore their layouts"
   homepage "https://github.com/d0lim/display-remember"
 
   depends_on arch: :arm64
   depends_on macos: :ventura
 
-  app "display-remember.app"
-  binary "#{appdir}/display-remember.app/Contents/MacOS/display-remember"
+  app "Display Remember.app"
+  binary "#{appdir}/Display Remember.app/Contents/MacOS/display-remember"
 
   zap trash: [
     "~/Library/Application Support/display-remember",

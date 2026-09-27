@@ -1,4 +1,4 @@
-# Releasing
+# Releasing Display Remember
 
 The version in `Sources/DisplayRememberCore/Version.swift` is shared by the CLI
 and app bundle. The public Homebrew cask currently targets Apple Silicon.
@@ -6,7 +6,7 @@ and app bundle. The public Homebrew cask currently targets Apple Silicon.
 ## Validate
 
 Run `swift test --build-system native`, then build and inspect the app. Use
-`DisplayRemember --render-demo OUTPUT.png` for screenshots containing fictional
+`"dist/Display Remember.app/Contents/MacOS/DisplayRemember" --render-demo OUTPUT.png` for screenshots containing fictional
 data. Do not publish real profiles, scan output, local notes, or signing files.
 
 Also render `--render-demo-ko`, `--render-settings-demo`, and
@@ -14,6 +14,12 @@ Also render `--render-demo-ko`, `--render-settings-demo`, and
 modes use memory-only preferences and do not register login items. Check language
 switching and the login toggle in an installed app before claiming manual coverage;
 synthetic launch-event tests do not replace a real logout/login check.
+
+Verify **Hide Dock icon** is on for fresh preferences, changes take effect
+immediately, and the choice survives relaunch. Opening the main window or Settings
+must respect that choice. Login launch still starts without the main window.
+The app bundle is named `Display Remember.app`; the CLI remains `display-remember`.
+The bundle identifier and existing profile and preference storage paths are unchanged.
 
 ## Sign and package
 
@@ -33,9 +39,9 @@ If using Xcode to notarize an archive, export the notarized app and package it
 without rebuilding or re-signing:
 
 ```sh
-xcrun stapler validate /path/to/display-remember.app
-spctl --assess --type execute --verbose=2 /path/to/display-remember.app
-scripts/package-app.sh /path/to/display-remember.app
+xcrun stapler validate "/path/to/Display Remember.app"
+spctl --assess --type execute --verbose=2 "/path/to/Display Remember.app"
+scripts/package-app.sh "/path/to/Display Remember.app"
 ```
 
 Packaging writes `dist/display-remember-VERSION-arm64.zip` and its `.sha256`

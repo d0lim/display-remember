@@ -24,9 +24,9 @@ final class EngineTests: XCTestCase {
         }
     }
 
-    func testSymlinkedPackagedCLIResolvesItsBundledHelper() throws {
+    func testSymlinkedPackagedCLIResolvesItsBundledHelperInAppWithSpaces() throws {
         try withDirectory { directory in
-            let app = directory.appendingPathComponent("display-remember.app")
+            let app = directory.appendingPathComponent("Display Remember.app")
             let cli = app.appendingPathComponent("Contents/MacOS/display-remember")
             let helper = app.appendingPathComponent("Contents/Helpers/displayplacer")
             let bin = directory.appendingPathComponent("bin")
@@ -46,7 +46,7 @@ final class EngineTests: XCTestCase {
 
     func testSymlinkedPackagedCLIWithMissingHelperCannotUseOtherCopies() throws {
         try withDirectory { directory in
-            let app = directory.appendingPathComponent("display-remember.app")
+            let app = directory.appendingPathComponent("Display Remember.app")
             let cli = app.appendingPathComponent("Contents/MacOS/display-remember")
             let bin = directory.appendingPathComponent("bin")
             let link = bin.appendingPathComponent("display-remember")
