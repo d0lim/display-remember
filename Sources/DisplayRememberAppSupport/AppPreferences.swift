@@ -18,6 +18,7 @@ public final class AppPreferences: ObservableObject {
         static let language = "displayRemember.language"
         static let pollingInterval = "displayRemember.pollingInterval"
         static let autoRestore = "displayRemember.autoRestore"
+        static let hideDockIcon = "displayRemember.hideDockIcon"
         static let selectedProfileName = "displayRemember.selectedProfileName"
     }
 
@@ -35,6 +36,10 @@ public final class AppPreferences: ObservableObject {
 
     @Published public var autoRestore: Bool {
         didSet { defaults?.set(autoRestore, forKey: Keys.autoRestore) }
+    }
+
+    @Published public var hideDockIcon: Bool {
+        didSet { defaults?.set(hideDockIcon, forKey: Keys.hideDockIcon) }
     }
 
     @Published public var selectedProfileName: String? {
@@ -63,12 +68,19 @@ public final class AppPreferences: ObservableObject {
         } else {
             autoRestore = false
         }
+        if let number = defaults?.object(forKey: Keys.hideDockIcon) as? NSNumber,
+           CFGetTypeID(number) == CFBooleanGetTypeID() {
+            hideDockIcon = number.boolValue
+        } else {
+            hideDockIcon = true
+        }
         selectedProfileName = Self.validProfileName(defaults?.string(forKey: Keys.selectedProfileName))
 
         // Repair invalid persisted values as well as exposing safe values in memory.
         defaults?.set(language.rawValue, forKey: Keys.language)
         defaults?.set(pollingInterval, forKey: Keys.pollingInterval)
         defaults?.set(autoRestore, forKey: Keys.autoRestore)
+        defaults?.set(hideDockIcon, forKey: Keys.hideDockIcon)
         persistProfileName()
     }
 

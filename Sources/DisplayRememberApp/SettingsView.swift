@@ -37,6 +37,11 @@ struct SettingsView: View {
                     Text("한국어").tag(AppLanguage.korean)
                 }
                 VStack(alignment: .leading, spacing: 6) {
+                    Toggle(l10n.text("Hide Dock icon"), isOn: $preferences.hideDockIcon)
+                    Text(l10n.text("Keep the app in the menu bar. Changes apply immediately."))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                VStack(alignment: .leading, spacing: 6) {
                     Toggle(l10n.text("Launch at login"), isOn: Binding(
                         get: { loginRequested },
                         set: { requested in
@@ -87,7 +92,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(minWidth: 500, idealWidth: 560, minHeight: 480, idealHeight: 550)
+        .frame(minWidth: 500, idealWidth: 560, minHeight: 540, idealHeight: 620)
         .environment(\.locale, model.locale)
         .onAppear { loginItem.refresh() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
@@ -118,7 +123,7 @@ struct AppSettingsButton: View {
             }
         }
         .accessibilityLabel(localizer.text("Settings…"))
-        .help(localizer.text("Language, login launch, and automatic restore"))
+        .help(localizer.text("Language, Dock icon, login launch, and automatic restore"))
     }
 
     @ViewBuilder

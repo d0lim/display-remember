@@ -20,8 +20,52 @@ final class PreferencesTests: XCTestCase {
         XCTAssertEqual(preferences.language, .system)
         XCTAssertEqual(preferences.pollingInterval, 5)
         XCTAssertFalse(preferences.autoRestore)
+        XCTAssertTrue(preferences.hideDockIcon)
         XCTAssertNil(preferences.selectedProfileName)
         XCTAssertNil(defaults.object(forKey: AppPreferences.Keys.selectedProfileName))
+    }
+
+    @MainActor
+    func testMissingDockPreferencePreservesExistingPreferencesDuringUpgrade() async throws {
+        let (defaults, suite) = try isolatedDefaults()
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set("ko", forKey: AppPreferences.Keys.language)
+        defaults.set(30, forKey: AppPreferences.Keys.pollingInterval)
+        defaults.set(true, forKey: AppPreferences.Keys.autoRestore)
+        defaults.set("Desk.json", forKey: AppPreferences.Keys.selectedProfileName)
+
+        let preferences = AppPreferences(defaults: defaults)
+        XCTAssertTrue(preferences.hideDockIcon)
+        XCTAssertTrue(defaults.bool(forKey: AppPreferences.Keys.hideDockIcon))
+        XCTAssertEqual(preferences.language, .korean)
+        XCTAssertEqual(preferences.pollingInterval, 30)
+        XCTAssertTrue(preferences.autoRestore)
+        XCTAssertEqual(preferences.selectedProfileName, "Desk.json")
+    }
+
+    @MainActor
+    func testDockVisibilityChoicePersistsAcrossInstances() async throws {
+        let (defaults, suite) = try isolatedDefaults()
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let preferences = AppPreferences(defaults: defaults)
+        preferences.hideDockIcon = false
+        XCTAssertEqual(defaults.object(forKey: AppPreferences.Keys.hideDockIcon) as? Bool, false)
+        XCTAssertFalse(AppPreferences(defaults: try XCTUnwrap(UserDefaults(suiteName: suite))).hideDockIcon)
+        preferences.hideDockIcon = true
+        XCTAssertTrue(AppPreferences(defaults: defaults).hideDockIcon)
+    }
+
+    @MainActor
+    func testInvalidStoredDockVisibilityIsRepairedToHidden() async throws {
+        let (defaults, suite) = try isolatedDefaults()
+        defer { defaults.removePersistentDomain(forName: suite) }
+        for invalid: Any in ["false", 0, 1, 2, [false]] {
+            defaults.set(invalid, forKey: AppPreferences.Keys.hideDockIcon)
+            XCTAssertTrue(AppPreferences(defaults: defaults).hideDockIcon)
+            let repaired = try XCTUnwrap(defaults.object(forKey: AppPreferences.Keys.hideDockIcon) as? NSNumber)
+            XCTAssertEqual(CFGetTypeID(repaired), CFBooleanGetTypeID())
+            XCTAssertTrue(repaired.boolValue)
+        }
     }
 
     @MainActor
@@ -139,12 +183,14 @@ final class PreferencesTests: XCTestCase {
         first.language = .english
         first.pollingInterval = 60
         first.autoRestore = true
+        first.hideDockIcon = false
         first.selectedProfileName = "Memory.json"
         let second = AppPreferences(defaults: nil)
         XCTAssertEqual(first.selectedProfileName, "Memory.json")
         XCTAssertEqual(second.language, .system)
         XCTAssertEqual(second.pollingInterval, 5)
         XCTAssertFalse(second.autoRestore)
+        XCTAssertTrue(second.hideDockIcon)
         XCTAssertNil(second.selectedProfileName)
     }
 

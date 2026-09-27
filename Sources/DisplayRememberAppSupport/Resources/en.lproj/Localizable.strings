@@ -90,7 +90,7 @@
 "Could Not Update Login Items" = "Could Not Update Login Items";
 "Try again or manage login items in System Settings." = "Try again or manage login items in System Settings.";
 "Settings…" = "Settings…";
-"Language, login launch, and automatic restore" = "Language, login launch, and automatic restore";
+"Language, Dock icon, login launch, and automatic restore" = "Language, Dock icon, login launch, and automatic restore";
 "Checking displays…" = "Checking displays…";
 "%d display connected" = "%d display connected";
 "%d displays connected" = "%d displays connected";
@@ -108,3 +108,6 @@
 "Could not complete the operation. See operation details." = "Could not complete the operation. See operation details.";
 "The saved layout is no longer available. Choose a layout to enable auto-restore." = "The saved layout is no longer available. Choose a layout to enable auto-restore.";
 "Demo layout · 2 fictional displays" = "Demo layout · 2 fictional displays";
+
+"Hide Dock icon" = "Hide Dock icon";
+"Keep the app in the menu bar. Changes apply immediately." = "Keep the app in the menu bar. Changes apply immediately.";

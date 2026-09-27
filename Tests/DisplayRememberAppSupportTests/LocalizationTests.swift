@@ -9,6 +9,8 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(english.text("Open Displays Settings"), "Open Displays Settings")
         XCTAssertEqual(korean.text("Open Displays Settings"), "디스플레이 설정 열기")
         XCTAssertEqual(korean.text("Launch at login"), "로그인 시 실행")
+        XCTAssertEqual(english.text("Hide Dock icon"), "Hide Dock icon")
+        XCTAssertEqual(korean.text("Hide Dock icon"), "Dock 아이콘 숨기기")
         XCTAssertEqual(english.locale.identifier, "en")
         XCTAssertEqual(korean.locale.identifier, "ko")
     }

@@ -32,7 +32,7 @@ struct DisplayRememberApp: App {
                     preview.autoRestore = true
                     preview.setStatus("Demo layout · 2 fictional displays")
                 }
-                let size = isSettings ? NSSize(width: 560, height: 590) : NSSize(width: 1080, height: 900)
+                let size = isSettings ? NSSize(width: 560, height: 650) : NSSize(width: 1080, height: 900)
                 let content = isSettings ? AnyView(SettingsView(model: preview)) : AnyView(ContentView(model: preview))
                 let view = content.frame(width: size.width, height: size.height)
                     .tint(Color(red: 0.08, green: 0.55, blue: 0.59))
@@ -65,9 +65,11 @@ struct DisplayRememberApp: App {
 
     var body: some Scene {
         Settings {
-            SettingsView(model: model).environment(\.locale, model.locale)
+            SettingsView(model: model)
+                .environment(\.locale, model.locale)
+                .onAppear { NSApp.activate(ignoringOtherApps: true) }
         }
-        MenuBarExtra("display-remember", systemImage: "display.2") {
+        MenuBarExtra("Display Remember", systemImage: "display.2") {
             Text(model.status)
             Button(l10n.text("Refresh Displays")) { model.refresh() }
             Button(l10n.text("Open Displays Settings")) { model.openDisplaySettings() }
@@ -169,7 +171,7 @@ struct ContentView: View {
         HStack(spacing: 14) {
             BrandIcon().frame(width: 48, height: 48).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
-                Text("display-remember")
+                Text("Display Remember")
                     .font(.system(size: 24, weight: .semibold, design: .rounded))
                 Text(l10n.text("Set it up in macOS. Remember it here."))
                     .font(.subheadline).foregroundStyle(.secondary)
