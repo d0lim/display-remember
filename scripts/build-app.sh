@@ -39,6 +39,14 @@ APP_DIR="$BUILD_STAGING/display-remember.app"
 mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Helpers" "$APP_DIR/Contents/Resources"
 cp "$BIN_DIR/DisplayRemember" "$APP_DIR/Contents/MacOS/DisplayRemember"
 cp "$BIN_DIR/display-remember" "$APP_DIR/Contents/MacOS/display-remember"
+RESOURCE_BUNDLE=display-remember_DisplayRememberAppSupport.bundle
+test -d "$BIN_DIR/$RESOURCE_BUNDLE" || { printf '%s\n' 'Missing app localization resources.' >&2; exit 2; }
+ditto --noextattr --norsrc "$BIN_DIR/$RESOURCE_BUNDLE" "$APP_DIR/Contents/Resources/$RESOURCE_BUNDLE"
+for LANGUAGE in en ko; do
+    STRINGS="$APP_DIR/Contents/Resources/$RESOURCE_BUNDLE/$LANGUAGE.lproj/Localizable.strings"
+    test -s "$STRINGS" || { printf 'Missing app strings: %s\n' "$LANGUAGE" >&2; exit 2; }
+    plutil -lint "$STRINGS"
+done
 "$PROJECT_DIR/scripts/build-engine.sh" "$APP_DIR/Contents/Helpers/displayplacer"
 cp "$PROJECT_DIR/LICENSE" "$APP_DIR/Contents/Resources/LICENSE.txt"
 cp "$PROJECT_DIR/Vendor/displayplacer/LICENSE" "$APP_DIR/Contents/Resources/displayplacer-LICENSE.txt"
@@ -54,6 +62,8 @@ cat > "$APP_DIR/Contents/Info.plist" <<PLIST
   <key>CFBundleIdentifier</key><string>dev.d0lim.display-remember</string>
   <key>CFBundleName</key><string>display-remember</string>
   <key>CFBundleDisplayName</key><string>display-remember</string>
+  <key>CFBundleDevelopmentRegion</key><string>en</string>
+  <key>CFBundleLocalizations</key><array><string>en</string><string>ko</string></array>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>$VERSION</string>
   <key>CFBundleVersion</key><string>$VERSION</string>
@@ -108,14 +118,13 @@ if [ -n "$NOTARY_PROFILE" ]; then
     codesign --verify --deep --strict "$APP_DIR"
 fi
 
+# Validate and package outside FileProvider-managed folders. Such folders can
+# attach Finder metadata immediately after a copy, invalidating strict checks.
+"$PROJECT_DIR/scripts/package-app.sh" "$APP_DIR"
+
 # Copy fresh, then exchange complete bundles atomically; never merge old files.
 STAGED_APP="$DIST_STAGING/display-remember.app"
 ditto --noextattr --norsrc "$APP_DIR" "$STAGED_APP"
 xattr -cr "$STAGED_APP"
-codesign --verify --deep --strict "$STAGED_APP"
-if [ -n "$NOTARY_PROFILE" ]; then xcrun stapler validate "$STAGED_APP"; fi
 xcrun swift "$PROJECT_DIR/scripts/replace-app.swift" "$STAGED_APP" "$PROJECT_DIR/dist/display-remember.app"
-# Package the clean build staging copy. FileProvider can attach Finder metadata
-# to the destination immediately after the atomic replacement.
-"$PROJECT_DIR/scripts/package-app.sh" "$APP_DIR"
 printf '%s\n' "$PROJECT_DIR/dist/display-remember.app"

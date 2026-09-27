@@ -55,6 +55,11 @@ fi
 for NOTICE in LICENSE.txt displayplacer-LICENSE.txt displayplacer-NOTICE.md; do
     test -f "$APP_DIR/Contents/Resources/$NOTICE" || { printf 'Missing bundled license/notice: %s\n' "$NOTICE" >&2; exit 2; }
 done
+for LANGUAGE in en ko; do
+    STRINGS="$APP_DIR/Contents/Resources/display-remember_DisplayRememberAppSupport.bundle/$LANGUAGE.lproj/Localizable.strings"
+    test -s "$STRINGS" || { printf 'Missing app strings: %s\n' "$LANGUAGE" >&2; exit 2; }
+    plutil -lint "$STRINGS"
+done
 mkdir -p "$PROJECT_DIR/dist"
 PACKAGE_STAGING=$(mktemp -d "$PROJECT_DIR/dist/.display-remember-package.XXXXXX")
 trap 'rm -rf "$PACKAGE_STAGING"' EXIT HUP INT TERM

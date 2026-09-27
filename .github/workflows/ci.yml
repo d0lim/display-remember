@@ -36,5 +36,9 @@ jobs:
           ln -s "$GITHUB_WORKSPACE/dist/display-remember.app/Contents/MacOS/display-remember" "$RUNNER_TEMP/display-remember"
           cd "$RUNNER_TEMP"
           ./display-remember displayplacer --version
-      - name: Render fictional demo
-        run: dist/display-remember.app/Contents/MacOS/DisplayRemember --render-demo "$RUNNER_TEMP/display-remember-demo.png"
+      - name: Render fictional demos in both languages
+        run: |
+          dist/display-remember.app/Contents/MacOS/DisplayRemember --render-demo "$RUNNER_TEMP/display-remember-demo.png"
+          dist/display-remember.app/Contents/MacOS/DisplayRemember --render-demo-ko "$RUNNER_TEMP/display-remember-demo-ko.png"
+          dist/display-remember.app/Contents/MacOS/DisplayRemember --render-settings-demo "$RUNNER_TEMP/display-remember-settings.png"
+          dist/display-remember.app/Contents/MacOS/DisplayRemember --render-settings-demo-ko "$RUNNER_TEMP/display-remember-settings-ko.png"

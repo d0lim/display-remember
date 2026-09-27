@@ -1,37 +1,46 @@
 import AppKit
 import SwiftUI
 import DisplayRememberCore
+import DisplayRememberAppSupport
 
 @main
 struct DisplayRememberApp: App {
     @StateObject private var model: AppModel
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    private var l10n: AppLocalizer { model.localizer }
 
     init() {
         // Demo rendering never reads connected hardware or the user's saved profiles.
         // The preview command retains its normal read-only scan for local visual QA.
         if CommandLine.arguments.count == 3,
-           ["--render-preview", "--render-demo"].contains(CommandLine.arguments[1]) {
+           ["--render-preview", "--render-demo", "--render-demo-ko", "--render-settings-demo", "--render-settings-demo-ko"].contains(CommandLine.arguments[1]) {
             do {
-                let isDemo = CommandLine.arguments[1] == "--render-demo"
+                let isDemo = CommandLine.arguments[1] != "--render-preview"
+                let isSettings = CommandLine.arguments[1].hasPrefix("--render-settings-demo")
+                let preferences = AppPreferences(defaults: nil)
+                preferences.language = CommandLine.arguments[1].hasSuffix("-ko") ? .korean : (isDemo ? .english : .system)
                 let snapshots: [DisplaySnapshot]
                 if isDemo { snapshots = DemoDisplays.snapshots }
                 else { snapshots = try DisplayService().inventory() }
-                let preview = AppModel(initialDisplays: snapshots, interactive: false, loadSavedProfiles: !isDemo)
+                let preview = AppModel(initialDisplays: snapshots, interactive: false, loadSavedProfiles: !isDemo,
+                    preferences: preferences, loginItem: LoginItemController(allowIntegration: false))
                 if isDemo {
                     // A fictional in-memory entry makes restore controls visible. No file is read or written.
                     let demoProfile = URL(fileURLWithPath: "/demo/Desk.json")
                     preview.profiles = [demoProfile]
                     preview.selectedProfile = demoProfile
                     preview.autoRestore = true
-                    preview.status = "Demo layout · 2 fictional displays"
+                    preview.setStatus("Demo layout · 2 fictional displays")
                 }
-                let view = ContentView(model: preview).frame(width: 1080, height: 900)
+                let size = isSettings ? NSSize(width: 560, height: 590) : NSSize(width: 1080, height: 900)
+                let content = isSettings ? AnyView(SettingsView(model: preview)) : AnyView(ContentView(model: preview))
+                let view = content.frame(width: size.width, height: size.height)
                     .tint(Color(red: 0.08, green: 0.55, blue: 0.59))
                     .background(Color(nsColor: .windowBackgroundColor))
                     .environment(\.colorScheme, .light)
-                    .environment(\.locale, isDemo ? Locale(identifier: "en_US_POSIX") : Locale.current)
+                    .environment(\.locale, preview.locale)
                 let host = NSHostingView(rootView: view)
-                host.frame = NSRect(x: 0, y: 0, width: 1080, height: 900)
+                host.frame = NSRect(origin: .zero, size: size)
                 let window = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
                 window.contentView = host
                 host.layoutSubtreeIfNeeded()
@@ -49,31 +58,30 @@ struct DisplayRememberApp: App {
                 exit(1)
             }
         }
-        _model = StateObject(wrappedValue: AppModel())
+        let applicationModel = AppModel()
+        _model = StateObject(wrappedValue: applicationModel)
+        appDelegate.configure(model: applicationModel)
     }
 
     var body: some Scene {
-        WindowGroup("display-remember") {
-            ContentView(model: model)
-                .frame(minWidth: 980, minHeight: 700)
-                .tint(Color(red: 0.08, green: 0.55, blue: 0.59))
+        Settings {
+            SettingsView(model: model).environment(\.locale, model.locale)
         }
-        .defaultSize(width: 1080, height: 820)
         MenuBarExtra("display-remember", systemImage: "display.2") {
             Text(model.status)
-            Button("Refresh Displays") { model.refresh() }
-            Button("Open Displays Settings") { model.openDisplaySettings() }
+            Button(l10n.text("Refresh Displays")) { model.refresh() }
+            Button(l10n.text("Open Displays Settings")) { model.openDisplaySettings() }
                 .disabled(model.busy)
-            Button("Restore Saved Layout") { model.profileAction(execute: true) }
+            Button(l10n.text("Restore Saved Layout")) { model.profileAction(execute: true) }
                 .disabled(model.selectedProfile == nil || model.busy)
-            Toggle("Auto-restore", isOn: $model.autoRestore)
+            Toggle(l10n.text("Auto-restore"), isOn: $model.autoRestore)
                 .disabled(model.selectedProfile == nil)
             Divider()
-            Button("Show Window") {
-                NSApp.activate(ignoringOtherApps: true)
-                NSApp.windows.first { $0.canBecomeMain }?.makeKeyAndOrderFront(nil)
+            Button(l10n.text("Show Window")) {
+                appDelegate.showWindow()
             }
-            Button("Quit") { NSApp.terminate(nil) }
+            AppSettingsButton(localizer: l10n, iconOnly: false)
+            Button(l10n.text("Quit")) { NSApp.terminate(nil) }
         }
     }
 }
@@ -103,7 +111,13 @@ private enum DemoDisplays {
 
 struct ContentView: View {
     @ObservedObject var model: AppModel
-    @State private var profileName = "Desk"
+    private var l10n: AppLocalizer { model.localizer }
+    @State private var profileName: String
+
+    init(model: AppModel) {
+        self.model = model
+        _profileName = State(initialValue: model.localizer.text("Desk"))
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -117,10 +131,10 @@ struct ContentView: View {
                         SystemSettingsCard(model: model)
                         RememberLayoutCard(model: model, profileName: $profileName)
                         if let display = model.displays.first(where: { $0.id == model.selectedID }) {
-                            DisplayDetails(display: display, displays: model.displays)
+                            DisplayDetails(display: display, displays: model.displays, localizer: l10n)
                         }
                         if !model.detail.isEmpty {
-                            DisclosureGroup("Operation details") {
+                            DisclosureGroup(l10n.text("Operation details")) {
                                 Text(model.detail)
                                     .font(.system(size: 11, design: .monospaced))
                                     .textSelection(.enabled)
@@ -140,11 +154,12 @@ struct ContentView: View {
             footer
         }
         .background(Color(nsColor: .windowBackgroundColor))
-        .alert("Could Not Complete the Operation", isPresented: Binding(
+        .environment(\.locale, model.locale)
+        .alert(l10n.text("Could Not Complete the Operation"), isPresented: Binding(
             get: { model.error != nil },
             set: { if !$0 { model.error = nil } }
         )) {
-            Button("OK") { model.error = nil }
+            Button(l10n.text("OK")) { model.error = nil }
         } message: {
             Text(model.error ?? "")
         }
@@ -156,19 +171,20 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("display-remember")
                     .font(.system(size: 24, weight: .semibold, design: .rounded))
-                Text("Set it up in macOS. Remember it here.")
+                Text(l10n.text("Set it up in macOS. Remember it here."))
                     .font(.subheadline).foregroundStyle(.secondary)
             }
             Spacer()
             if model.busy {
                 ProgressView().controlSize(.small)
-                    .accessibilityLabel("Checking display information")
+                    .accessibilityLabel(l10n.text("Checking display information"))
             }
             Button { model.refresh() } label: {
-                Label("Refresh", systemImage: "arrow.clockwise")
+                Label(l10n.text("Refresh"), systemImage: "arrow.clockwise")
             }
             .disabled(model.busy)
-            .help("Refresh connected displays and their layout")
+            .help(l10n.text("Refresh connected displays and their layout"))
+            AppSettingsButton(localizer: l10n)
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 20)
@@ -180,7 +196,7 @@ struct ContentView: View {
                 .frame(width: 6, height: 6).accessibilityHidden(true)
             Text(model.status).font(.caption).lineLimit(2)
             Spacer(minLength: 16)
-            Text(model.autoRestore ? "Auto-restore on" : "Auto-restore off")
+            Text(model.autoRestore ? l10n.text("Auto-restore on") : l10n.text("Auto-restore off"))
                 .font(.caption).foregroundStyle(.secondary)
         }
         .padding(.horizontal, 22)
@@ -202,11 +218,12 @@ private struct BrandIcon: View {
 
 private struct MonitorSidebar: View {
     @ObservedObject var model: AppModel
+    private var l10n: AppLocalizer { model.localizer }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Text("Connected displays").font(.headline)
+                Text(l10n.text("Connected displays")).font(.headline)
                 Spacer()
                 Text("\(model.displays.count)")
                     .font(.caption.weight(.semibold))
@@ -223,7 +240,7 @@ private struct MonitorSidebar: View {
                 }
                 .padding(.horizontal, 10)
             }
-            Label("Select a display to view its current setup.", systemImage: "info.circle")
+            Label(l10n.text("Select a display to view its current setup."), systemImage: "info.circle")
                 .font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(18)
@@ -242,11 +259,11 @@ private struct MonitorSidebar: View {
                     Text(display.name).fontWeight(.medium).lineLimit(2)
                     Text(display.settings.enabled
                          ? "\(display.settings.width) × \(display.settings.height)"
-                         : "Disabled")
+                         : l10n.text("Disabled"))
                         .font(.caption).foregroundStyle(.secondary)
                     Text(display.identity.serialText.isEmpty
-                         ? "No text serial"
-                         : "Serial …\(display.identity.serialText.suffix(6))")
+                         ? l10n.text("No text serial")
+                         : l10n.text("Serial …%@", String(display.identity.serialText.suffix(6))))
                         .font(.system(size: 10, design: .monospaced))
                         .foregroundStyle(.secondary).lineLimit(1)
                 }
@@ -268,46 +285,47 @@ private struct MonitorSidebar: View {
             .contentShape(RoundedRectangle(cornerRadius: 11))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("\(display.name), \(display.identity.serialText.isEmpty ? "Serial unavailable" : display.identity.serialText)")
-        .accessibilityValue(selected ? "Selected" : "Not selected")
+        .accessibilityLabel("\(display.name), \(display.identity.serialText.isEmpty ? l10n.text("Serial unavailable") : display.identity.serialText)")
+        .accessibilityValue(selected ? l10n.text("Selected") : l10n.text("Not selected"))
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
 private struct SystemSettingsCard: View {
     @ObservedObject var model: AppModel
+    private var l10n: AppLocalizer { model.localizer }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .center, spacing: 16) {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("Set up your displays").font(.system(size: 18, weight: .semibold))
-                    Text("Arrange screens and adjust display settings in macOS.")
+                    Text(l10n.text("Set up your displays")).font(.system(size: 18, weight: .semibold))
+                    Text(l10n.text("Arrange screens and adjust display settings in macOS."))
                         .font(.subheadline).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 8)
                 Button { model.openDisplaySettings() } label: {
-                    Label("Open Displays Settings", systemImage: "arrow.up.right.square")
+                    Label(l10n.text("Open Displays Settings"), systemImage: "arrow.up.right.square")
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
                 .fixedSize(horizontal: true, vertical: false)
                 .disabled(model.busy)
-                .help("Open macOS Displays settings and turn off auto-restore")
+                .help(l10n.text("Open macOS Displays settings and turn off auto-restore"))
             }
             HStack {
-                Text("Current layout").font(.subheadline.weight(.medium))
+                Text(l10n.text("Current layout")).font(.subheadline.weight(.medium))
                 Spacer()
-                Label("Read-only", systemImage: "eye")
+                Label(l10n.text("Read-only"), systemImage: "eye")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            LayoutPreview(displays: model.displays, selectedID: model.selectedID)
+            LayoutPreview(displays: model.displays, selectedID: model.selectedID, localizer: l10n)
                 .frame(height: 150)
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Current display layout preview")
-                .accessibilityValue("\(model.displays.filter { $0.settings.enabled }.count) active displays")
-            Text("Opening settings turns off auto-restore. Save your changes here, then turn it back on.")
+                .accessibilityLabel(l10n.text("Current display layout preview"))
+                .accessibilityValue(l10n.text("%d active displays", model.displays.filter { $0.settings.enabled }.count))
+            Text(l10n.text("Opening settings turns off auto-restore. Save your changes here, then turn it back on."))
                 .font(.caption).foregroundStyle(.secondary)
         }
         .padding(20)
@@ -320,14 +338,15 @@ private struct SystemSettingsCard: View {
 
 private struct RememberLayoutCard: View {
     @ObservedObject var model: AppModel
+    private var l10n: AppLocalizer { model.localizer }
     @Binding var profileName: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("Remember your layout").font(.system(size: 18, weight: .semibold))
-                    Text("Restore each display to its saved position when it reconnects.")
+                    Text(l10n.text("Remember your layout")).font(.system(size: 18, weight: .semibold))
+                    Text(l10n.text("Restore each display to its saved position when it reconnects."))
                         .font(.subheadline).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
@@ -335,28 +354,28 @@ private struct RememberLayoutCard: View {
                     .font(.system(size: 21)).foregroundStyle(.teal).accessibilityHidden(true)
             }
             HStack(spacing: 10) {
-                TextField("Layout name", text: $profileName)
+                TextField(l10n.text("Layout name"), text: $profileName)
                     .textFieldStyle(.roundedBorder)
-                    .accessibilityLabel("Name for the saved layout")
-                Button("Save Current Layout") { model.save(name: profileName) }
+                    .accessibilityLabel(l10n.text("Name for the saved layout"))
+                Button(l10n.text("Save Current Layout")) { model.save(name: profileName) }
                     .disabled(model.busy || profileName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             if model.profiles.isEmpty {
-                Text("Save a layout to enable restore and auto-restore.")
+                Text(l10n.text("Save a layout to enable restore and auto-restore."))
                     .font(.caption).foregroundStyle(.secondary)
             } else {
                 HStack(spacing: 10) {
-                    Picker("Saved layout", selection: $model.selectedProfile) {
-                        Text("Choose a layout").tag(nil as URL?)
+                    Picker(l10n.text("Saved layout"), selection: $model.selectedProfile) {
+                        Text(l10n.text("Choose a layout")).tag(nil as URL?)
                         ForEach(model.profiles, id: \.self) { url in
                             Text(url.deletingPathExtension().lastPathComponent).tag(Optional(url))
                         }
                     }
-                    Button("Preview") { model.profileAction(execute: false) }
+                    Button(l10n.text("Preview")) { model.profileAction(execute: false) }
                         .disabled(model.selectedProfile == nil || model.busy)
-                        .help("Preview the restore command without changing your displays")
+                        .help(l10n.text("Preview the restore command without changing your displays"))
                     Button { model.profileAction(execute: true) } label: {
-                        Label("Restore Layout", systemImage: "arrow.counterclockwise")
+                        Label(l10n.text("Restore Layout"), systemImage: "arrow.counterclockwise")
                     }
                     .disabled(model.selectedProfile == nil || model.busy)
                 }
@@ -364,24 +383,24 @@ private struct RememberLayoutCard: View {
             Divider()
             HStack(alignment: .center, spacing: 14) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Toggle("Restore after reconnect or wake", isOn: $model.autoRestore)
+                    Toggle(l10n.text("Restore after reconnect or wake"), isOn: $model.autoRestore)
                         .toggleStyle(.switch)
                         .disabled(model.selectedProfile == nil)
-                    Text("Keeps the selected layout in place while the app is running.")
+                    Text(l10n.text("Keeps the selected layout in place while the app is running."))
                         .font(.caption).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 4)
                 Button { model.importProfile() } label: {
-                    Label("Import", systemImage: "square.and.arrow.down")
+                    Label(l10n.text("Import"), systemImage: "square.and.arrow.down")
                 }
                 .disabled(model.busy)
-                .help("Import a saved JSON layout")
+                .help(l10n.text("Import a saved JSON layout"))
                 Button { model.showProfiles() } label: {
                     Image(systemName: "folder")
                 }
-                .accessibilityLabel("Open the saved layouts folder")
-                .help("Open the saved layouts folder")
+                .accessibilityLabel(l10n.text("Open the saved layouts folder"))
+                .help(l10n.text("Open the saved layouts folder"))
             }
         }
         .padding(20)
@@ -395,29 +414,31 @@ private struct RememberLayoutCard: View {
 struct DisplayDetails: View {
     let display: DisplaySnapshot
     let displays: [DisplaySnapshot]
+    let localizer: AppLocalizer
+    private var l10n: AppLocalizer { localizer }
 
     private var settings: DisplaySettings { display.settings }
     private var stateLabel: String {
-        if !settings.enabled { return "Disabled" }
-        if display.mirrorPrimaryID != nil { return "Mirroring" }
-        if settings.x == 0 && settings.y == 0 { return "Main display" }
-        return "Extended display"
+        if !settings.enabled { return l10n.text("Disabled") }
+        if display.mirrorPrimaryID != nil { return l10n.text("Mirroring") }
+        if settings.x == 0 && settings.y == 0 { return l10n.text("Main display") }
+        return l10n.text("Extended display")
     }
     private var summary: String {
-        guard settings.enabled else { return "This display is currently disabled." }
+        guard settings.enabled else { return l10n.text("This display is currently disabled.") }
         var values = ["\(settings.width) × \(settings.height)"]
         if let rate = settings.refreshRate { values.append("\(rate) Hz") }
-        if settings.rotation != 0 { values.append("Rotated \(settings.rotation)°") }
+        if settings.rotation != 0 { values.append(l10n.text("Rotated %d°", settings.rotation)) }
         return values.joined(separator: " · ")
     }
     private var mirroring: String {
         if let sourceID = display.mirrorPrimaryID {
-            guard let source = displays.first(where: { $0.id == sourceID }) else { return "Mirroring another display" }
+            guard let source = displays.first(where: { $0.id == sourceID }) else { return l10n.text("Mirroring another display") }
             let serial = source.identity.serialText
-            return "Mirroring \(source.name)\(serial.isEmpty ? "" : " · …\(serial.suffix(5))")"
+            return l10n.text("Mirroring %@", "\(source.name)\(serial.isEmpty ? "" : " · …\(serial.suffix(5))")")
         }
         let followers = displays.filter { $0.mirrorPrimaryID == display.id }.count
-        return followers > 0 ? "Mirror source · \(followers) display\(followers == 1 ? "" : "s")" : "Not mirrored"
+        return followers > 0 ? l10n.text(followers == 1 ? "Mirror source · %d display" : "Mirror source · %d displays", followers) : l10n.text("Not mirrored")
     }
 
     var body: some View {
@@ -436,20 +457,20 @@ struct DisplayDetails: View {
                     .background(settings.enabled ? Color.teal.opacity(0.09) : Color.secondary.opacity(0.09),
                                 in: Capsule())
             }
-            DisclosureGroup("Display details") {
+            DisclosureGroup(l10n.text("Display details")) {
                 VStack(alignment: .leading, spacing: 12) {
                     Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 10) {
-                        detailRow("Serial", display.identity.serialText.isEmpty ? "Text serial unavailable" : display.identity.serialText)
-                        detailRow("Position", "X \(settings.x) · Y \(settings.y)")
-                        detailRow("Rotation", "\(settings.rotation)°")
-                        detailRow("HiDPI · Color depth", "\(settings.scaled ? "On" : "Off") · \(settings.colorDepth) bit")
-                        detailRow("Mirroring", mirroring)
+                        detailRow(l10n.text("Serial"), display.identity.serialText.isEmpty ? l10n.text("Text serial unavailable") : display.identity.serialText)
+                        detailRow(l10n.text("Position"), "X \(settings.x) · Y \(settings.y)")
+                        detailRow(l10n.text("Rotation"), "\(settings.rotation)°")
+                        detailRow(l10n.text("HiDPI · Color depth"), "\(settings.scaled ? l10n.text("On") : l10n.text("Off")) · \(settings.colorDepth) bit")
+                        detailRow(l10n.text("Mirroring"), mirroring)
                     }
-                    DisclosureGroup("Supported modes (\(display.modes.count))") {
+                    DisclosureGroup(l10n.text("Supported modes (%d)", display.modes.count)) {
                         ScrollView {
                             LazyVStack(alignment: .leading, spacing: 7) {
                                 ForEach(display.modes, id: \.number) { mode in
-                                    Text("\(mode.width) × \(mode.height) · \(mode.refreshRate.map { "\($0) Hz" } ?? "Refresh rate unavailable") · \(mode.colorDepth) bit\(mode.scaled ? " · HiDPI" : "")\(mode.current ? " · Current" : "")")
+                                    Text("\(mode.width) × \(mode.height) · \(mode.refreshRate.map { "\($0) Hz" } ?? l10n.text("Refresh rate unavailable")) · \(mode.colorDepth) bit\(mode.scaled ? " · HiDPI" : "")\(mode.current ? " · \(l10n.text("Current"))" : "")")
                                         .font(.caption)
                                 }
                             }
@@ -458,9 +479,13 @@ struct DisplayDetails: View {
                         }
                         .frame(maxHeight: 160)
                     }
-                    ForEach(display.warnings, id: \.self) {
-                        Label($0, systemImage: "exclamationmark.circle")
-                            .font(.caption).foregroundStyle(.orange)
+                    if !display.warnings.isEmpty {
+                        DisclosureGroup(l10n.text("Operation details")) {
+                            ForEach(display.warnings, id: \.self) {
+                                Label($0, systemImage: "exclamationmark.circle")
+                                    .font(.caption).foregroundStyle(.orange)
+                            }
+                        }
                     }
                 }
                 .padding(.top, 10)
@@ -486,6 +511,8 @@ struct DisplayDetails: View {
 struct LayoutPreview: View {
     let displays: [DisplaySnapshot]
     let selectedID: UInt32?
+    let localizer: AppLocalizer
+    private var l10n: AppLocalizer { localizer }
 
     var body: some View {
         GeometryReader { geometry in
@@ -507,10 +534,10 @@ struct LayoutPreview: View {
                     VStack(spacing: 5) {
                         Text(display.name).font(.system(size: 11, weight: .semibold))
                             .lineLimit(1).minimumScaleFactor(0.75)
-                        Text(display.identity.serialText.isEmpty ? "No serial" : "…\(display.identity.serialText.suffix(5))")
+                        Text(display.identity.serialText.isEmpty ? l10n.text("No serial") : "…\(display.identity.serialText.suffix(5))")
                             .font(.system(size: 9, design: .monospaced)).opacity(0.65)
                         if isMain {
-                            Text("Main display").font(.system(size: 9, weight: .medium)).opacity(0.75)
+                            Text(l10n.text("Main display")).font(.system(size: 9, weight: .medium)).opacity(0.75)
                         }
                     }
                     .padding(.horizontal, 5)
@@ -527,7 +554,7 @@ struct LayoutPreview: View {
                             y: offsetY + Double(settings.y - minY) * scale)
                 }
                 if active.isEmpty {
-                    Text("Checking connected displays.")
+                    Text(l10n.text("Checking connected displays."))
                         .font(.subheadline).foregroundStyle(.secondary).padding(22)
                 }
             }
