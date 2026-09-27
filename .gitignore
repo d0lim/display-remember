@@ -1,0 +1,25 @@
+# Generated build and distribution files
+.build/
+.swiftpm/
+dist/
+Assets/AppIcon.icns
+*.xcarchive/
+*.dSYM/
+.DS_Store
+
+# Local profiles, credentials, and working notes
+Profiles/
+profiles/
+.env
+.env.*
+*.p12
+*.p8
+*.mobileprovision
+*.local.*
+work/
+tmp/
+.codex/
+.claude/
+.re0/
+AGENTS.md
+CLAUDE.md
